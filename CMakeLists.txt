@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.5.1 FATAL_ERROR)
+project(cuda2ispc LANGUAGES CXX)
+find_package(LLVM REQUIRED Config)
+message("llvm dir ${LLVM_DIR}")
+add_executable(cuda2ispc cuda2ispc.cpp)
+include_directories(${LLVM_INCLUDE_DIRS})
+message("${LLVM_INCLUDE_DIRS}")
