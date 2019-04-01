@@ -1,0 +1,8 @@
+# vim swap files
+*.swp
+
+# build dir
+build/
+
+# vscode dir
+.vscode/
