@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "gputimer.h"
-#include "transpose.h"
+#include "transpose_ispc.h"
 
 const int N= 1024;		// matrix size is NxN
 const int K= 32;				// tile size is KxK
