@@ -13,4 +13,4 @@ tasksys.o:
 	clang++ -c -o tasksys.o -std=c++11 ../utils/tasksys.cpp 
 
 clean:
-	rm *.o a.out
+	rm *.o a.out *_ispc.h
