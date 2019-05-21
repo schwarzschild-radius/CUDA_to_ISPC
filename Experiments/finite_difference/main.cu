@@ -22,205 +22,193 @@ __constant__ float c_ax, c_bx, c_cx, c_dx;
 __constant__ float c_ay, c_by, c_cy, c_dy;
 __constant__ float c_az, c_bz, c_cz, c_dz;
 
-__global__ void derivative_x(float *f, float *df)
-{  
-  __shared__ float s_f[sPencils][mx+8]; // 4-wide halo
+__global__ void derivative_x(float *f, float *df) {
+    __shared__ float s_f[sPencils][mx + 8]; // 4-wide halo
 
-//   if(blockIdx.x == 0 && threadIdx.x == 0){
-//       printf("%f, %f, %f, %f\n", c_ax, c_bx, c_cx, c_dx);
-//   }
+    //   if(blockIdx.x == 0 && threadIdx.x == 0){
+    //       printf("%f, %f, %f, %f\n", c_ax, c_bx, c_cx, c_dx);
+    //   }
 
-  int i   = threadIdx.x;
-  int j   = blockIdx.x*blockDim.y + threadIdx.y;
-  int k  = blockIdx.y;
-  int si = i + 4;       // local i for shared memory access + halo offset
-  int sj = threadIdx.y; // local j for shared memory access
+    int i = threadIdx.x;
+    int j = blockIdx.x * blockDim.y + threadIdx.y;
+    int k = blockIdx.y;
+    int si = i + 4;       // local i for shared memory access + halo offset
+    int sj = threadIdx.y; // local j for shared memory access
 
-  int globalIdx = k * mx * my + j * mx + i;
+    int globalIdx = k * mx * my + j * mx + i;
 
-  s_f[sj][si] = f[globalIdx];
-
-  __syncthreads();
-
-  // fill in periodic images in shared memory array 
-  if (i < 4) {
-    s_f[sj][si-4]  = s_f[sj][si+mx-5];
-    s_f[sj][si+mx] = s_f[sj][si+1];   
-  }
-
-  __syncthreads();
-  
-  df[globalIdx] = 
-    ( c_ax * ( s_f[sj][si+1] - s_f[sj][si-1] )
-    + c_bx * ( s_f[sj][si+2] - s_f[sj][si-2] )
-    + c_cx * ( s_f[sj][si+3] - s_f[sj][si-3] )
-    + c_dx * ( s_f[sj][si+4] - s_f[sj][si-4] ) );
-}
-
-__global__ void derivative_x_lPencils(float *f, float *df)
-{
-  __shared__ float s_f[lPencils][mx+8]; // 4-wide halo
-  
-  int i     = threadIdx.x;
-  int jBase = blockIdx.x*lPencils;
-  int k     = blockIdx.y;
-  int si    = i + 4; // local i for shared memory access + halo offset
-
-  for (int sj = threadIdx.y; sj < lPencils; sj += blockDim.y) {
-    int globalIdx = k * mx * my + (jBase + sj) * mx + i;      
     s_f[sj][si] = f[globalIdx];
-  }
 
-  __syncthreads();
+    __syncthreads();
 
-  // fill in periodic images in shared memory array 
-  if (i < 4) {
-    for (int sj = threadIdx.y; sj < lPencils; sj += blockDim.y) {
-      s_f[sj][si-4]  = s_f[sj][si+mx-5];
-      s_f[sj][si+mx] = s_f[sj][si+1];
+    // fill in periodic images in shared memory array
+    if (i < 4) {
+        s_f[sj][si - 4] = s_f[sj][si + mx - 5];
+        s_f[sj][si + mx] = s_f[sj][si + 1];
     }
-  }
 
-  __syncthreads();
+    __syncthreads();
 
-  for (int sj = threadIdx.y; sj < lPencils; sj += blockDim.y) {
-     int globalIdx = k * mx * my + (jBase + sj) * mx + i;      
-     df[globalIdx] = 
-      ( c_ax * ( s_f[sj][si+1] - s_f[sj][si-1] )
-      + c_bx * ( s_f[sj][si+2] - s_f[sj][si-2] )
-      + c_cx * ( s_f[sj][si+3] - s_f[sj][si-3] )
-      + c_dx * ( s_f[sj][si+4] - s_f[sj][si-4] ) );
-  }
+    df[globalIdx] = (c_ax * (s_f[sj][si + 1] - s_f[sj][si - 1]) +
+                     c_bx * (s_f[sj][si + 2] - s_f[sj][si - 2]) +
+                     c_cx * (s_f[sj][si + 3] - s_f[sj][si - 3]) +
+                     c_dx * (s_f[sj][si + 4] - s_f[sj][si - 4]));
 }
 
-__global__ void derivative_y(float *f, float *df)
-{
-  __shared__ float s_f[my+8][sPencils];
+__global__ void derivative_x_lPencils(float *f, float *df) {
+    __shared__ float s_f[lPencils][mx + 8]; // 4-wide halo
 
-  int i  = blockIdx.x*blockDim.x + threadIdx.x;
-  int j  = threadIdx.y;
-  int k  = blockIdx.y;
-  int si = threadIdx.x;
-  int sj = j + 4;
+    int i = threadIdx.x;
+    int jBase = blockIdx.x * lPencils;
+    int k = blockIdx.y;
+    int si = i + 4; // local i for shared memory access + halo offset
 
-  int globalIdx = k * mx * my + j * mx + i;
+    for (int sj = threadIdx.y; sj < lPencils; sj += blockDim.y) {
+        int globalIdx = k * mx * my + (jBase + sj) * mx + i;
+        s_f[sj][si] = f[globalIdx];
+    }
 
-  s_f[sj][si] = f[globalIdx];
-  
-  __syncthreads();
+    __syncthreads();
 
-  if (j < 4) {
-    s_f[sj-4][si]  = s_f[sj+my-5][si];
-    s_f[sj+my][si] = s_f[sj+1][si];
-  }
+    // fill in periodic images in shared memory array
+    if (i < 4) {
+        for (int sj = threadIdx.y; sj < lPencils; sj += blockDim.y) {
+            s_f[sj][si - 4] = s_f[sj][si + mx - 5];
+            s_f[sj][si + mx] = s_f[sj][si + 1];
+        }
+    }
 
-  __syncthreads();
+    __syncthreads();
 
-  df[globalIdx] = 
-    ( c_ay * ( s_f[sj+1][si] - s_f[sj-1][si] )
-    + c_by * ( s_f[sj+2][si] - s_f[sj-2][si] )
-    + c_cy * ( s_f[sj+3][si] - s_f[sj-3][si] )
-    + c_dy * ( s_f[sj+4][si] - s_f[sj-4][si] ) );
+    for (int sj = threadIdx.y; sj < lPencils; sj += blockDim.y) {
+        int globalIdx = k * mx * my + (jBase + sj) * mx + i;
+        df[globalIdx] = (c_ax * (s_f[sj][si + 1] - s_f[sj][si - 1]) +
+                         c_bx * (s_f[sj][si + 2] - s_f[sj][si - 2]) +
+                         c_cx * (s_f[sj][si + 3] - s_f[sj][si - 3]) +
+                         c_dx * (s_f[sj][si + 4] - s_f[sj][si - 4]));
+    }
 }
 
-__global__ void derivative_y_lPencils(float *f, float *df)
-{
-  __shared__ float s_f[my+8][lPencils];
+__global__ void derivative_y(float *f, float *df) {
+    __shared__ float s_f[my + 8][sPencils];
 
-  int i  = blockIdx.x*blockDim.x + threadIdx.x;
-  int k  = blockIdx.y;
-  int si = threadIdx.x;
-  
-  for (int j = threadIdx.y; j < my; j += blockDim.y) {
-    int globalIdx = k * mx * my + j * mx + i;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = threadIdx.y;
+    int k = blockIdx.y;
+    int si = threadIdx.x;
     int sj = j + 4;
+
+    int globalIdx = k * mx * my + j * mx + i;
+
     s_f[sj][si] = f[globalIdx];
-  }
 
-  __syncthreads();
+    __syncthreads();
 
-  int sj = threadIdx.y + 4;
-  if (sj < 8) {
-     s_f[sj-4][si]  = s_f[sj+my-5][si];
-     s_f[sj+my][si] = s_f[sj+1][si];   
-  }
+    if (j < 4) {
+        s_f[sj - 4][si] = s_f[sj + my - 5][si];
+        s_f[sj + my][si] = s_f[sj + 1][si];
+    }
 
-  __syncthreads();
+    __syncthreads();
 
-  for (int j = threadIdx.y; j < my; j += blockDim.y) {
-    int globalIdx = k * mx * my + j * mx + i;
-    int sj = j + 4;
-    df[globalIdx] = 
-      ( c_ay * ( s_f[sj+1][si] - s_f[sj-1][si] )
-      + c_by * ( s_f[sj+2][si] - s_f[sj-2][si] )
-      + c_cy * ( s_f[sj+3][si] - s_f[sj-3][si] )
-      + c_dy * ( s_f[sj+4][si] - s_f[sj-4][si] ) );
-  }
+    df[globalIdx] = (c_ay * (s_f[sj + 1][si] - s_f[sj - 1][si]) +
+                     c_by * (s_f[sj + 2][si] - s_f[sj - 2][si]) +
+                     c_cy * (s_f[sj + 3][si] - s_f[sj - 3][si]) +
+                     c_dy * (s_f[sj + 4][si] - s_f[sj - 4][si]));
 }
 
-__global__ void derivative_z(float *f, float *df)
-{
-  __shared__ float s_f[mz+8][sPencils];
+__global__ void derivative_y_lPencils(float *f, float *df) {
+    __shared__ float s_f[my + 8][lPencils];
 
-  int i  = blockIdx.x*blockDim.x + threadIdx.x;
-  int j  = blockIdx.y;
-  int k  = threadIdx.y;
-  int si = threadIdx.x;
-  int sk = k + 4; // halo offset
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int k = blockIdx.y;
+    int si = threadIdx.x;
 
-  int globalIdx = k * mx * my + j * mx + i;
+    for (int j = threadIdx.y; j < my; j += blockDim.y) {
+        int globalIdx = k * mx * my + j * mx + i;
+        int sj = j + 4;
+        s_f[sj][si] = f[globalIdx];
+    }
 
-  s_f[sk][si] = f[globalIdx];
+    __syncthreads();
 
-  __syncthreads();
+    int sj = threadIdx.y + 4;
+    if (sj < 8) {
+        s_f[sj - 4][si] = s_f[sj + my - 5][si];
+        s_f[sj + my][si] = s_f[sj + 1][si];
+    }
 
-  if (k < 4) {
-     s_f[sk-4][si]  = s_f[sk+mz-5][si];
-     s_f[sk+mz][si] = s_f[sk+1][si];
-  }
+    __syncthreads();
 
-  __syncthreads();
-
-  df[globalIdx] = 
-    ( c_az * ( s_f[sk+1][si] - s_f[sk-1][si] )
-    + c_bz * ( s_f[sk+2][si] - s_f[sk-2][si] )
-    + c_cz * ( s_f[sk+3][si] - s_f[sk-3][si] )
-    + c_dz * ( s_f[sk+4][si] - s_f[sk-4][si] ) );
+    for (int j = threadIdx.y; j < my; j += blockDim.y) {
+        int globalIdx = k * mx * my + j * mx + i;
+        int sj = j + 4;
+        df[globalIdx] = (c_ay * (s_f[sj + 1][si] - s_f[sj - 1][si]) +
+                         c_by * (s_f[sj + 2][si] - s_f[sj - 2][si]) +
+                         c_cy * (s_f[sj + 3][si] - s_f[sj - 3][si]) +
+                         c_dy * (s_f[sj + 4][si] - s_f[sj - 4][si]));
+    }
 }
 
-__global__ void derivative_z_lPencils(float *f, float *df)
-{
-  __shared__ float s_f[mz+8][lPencils];
+__global__ void derivative_z(float *f, float *df) {
+    __shared__ float s_f[mz + 8][sPencils];
 
-  int i  = blockIdx.x*blockDim.x + threadIdx.x;
-  int j  = blockIdx.y;
-  int si = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y;
+    int k = threadIdx.y;
+    int si = threadIdx.x;
+    int sk = k + 4; // halo offset
 
-  for (int k = threadIdx.y; k < mz; k += blockDim.y) {
     int globalIdx = k * mx * my + j * mx + i;
-    int sk = k + 4;
+
     s_f[sk][si] = f[globalIdx];
-  }
 
-  __syncthreads();
+    __syncthreads();
 
-  int k = threadIdx.y + 4;
-  if (k < 8) {
-     s_f[k-4][si]  = s_f[k+mz-5][si];
-     s_f[k+mz][si] = s_f[k+1][si];
-  }
+    if (k < 4) {
+        s_f[sk - 4][si] = s_f[sk + mz - 5][si];
+        s_f[sk + mz][si] = s_f[sk + 1][si];
+    }
 
-  __syncthreads();
+    __syncthreads();
 
-  for (int k = threadIdx.y; k < mz; k += blockDim.y) {
-    int globalIdx = k * mx * my + j * mx + i;
-    int sk = k + 4;
-    df[globalIdx] = 
-        ( c_az * ( s_f[sk+1][si] - s_f[sk-1][si] )
-        + c_bz * ( s_f[sk+2][si] - s_f[sk-2][si] )
-        + c_cz * ( s_f[sk+3][si] - s_f[sk-3][si] )
-        + c_dz * ( s_f[sk+4][si] - s_f[sk-4][si] ) );  
-  }
+    df[globalIdx] = (c_az * (s_f[sk + 1][si] - s_f[sk - 1][si]) +
+                     c_bz * (s_f[sk + 2][si] - s_f[sk - 2][si]) +
+                     c_cz * (s_f[sk + 3][si] - s_f[sk - 3][si]) +
+                     c_dz * (s_f[sk + 4][si] - s_f[sk - 4][si]));
+}
+
+__global__ void derivative_z_lPencils(float *f, float *df) {
+    __shared__ float s_f[mz + 8][lPencils];
+
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y;
+    int si = threadIdx.x;
+
+    for (int k = threadIdx.y; k < mz; k += blockDim.y) {
+        int globalIdx = k * mx * my + j * mx + i;
+        int sk = k + 4;
+        s_f[sk][si] = f[globalIdx];
+    }
+
+    __syncthreads();
+
+    int k = threadIdx.y + 4;
+    if (k < 8) {
+        s_f[k - 4][si] = s_f[k + mz - 5][si];
+        s_f[k + mz][si] = s_f[k + 1][si];
+    }
+
+    __syncthreads();
+
+    for (int k = threadIdx.y; k < mz; k += blockDim.y) {
+        int globalIdx = k * mx * my + j * mx + i;
+        int sk = k + 4;
+        df[globalIdx] = (c_az * (s_f[sk + 1][si] - s_f[sk - 1][si]) +
+                         c_bz * (s_f[sk + 2][si] - s_f[sk - 2][si]) +
+                         c_cz * (s_f[sk + 3][si] - s_f[sk - 3][si]) +
+                         c_dz * (s_f[sk + 4][si] - s_f[sk - 4][si]));
+    }
 }
 
 // host routine to set constant data
@@ -373,7 +361,7 @@ void checkResults(double &error, double &maxError, float *sol, float *df) {
                 float f = df[k * mx * my + j * mx + i];
                 if ((int)(s * 1000) != (int)(f * 1000)) {
                     mismatch_count++;
-                    printf("%d %d %d: %f %f\n", i, j, k, s, f);
+                    // printf("%d %d %d: %f %f\n", i, j, k, s, f);
                 }
                 total_count++;
                 error += (s - f) * (s - f);
@@ -394,19 +382,36 @@ void checkResults(double &error, double &maxError, float *sol, float *df) {
 // Run the kernels for a given dimension. One for sPencils, one for lPencils
 void runTest(int dimension) {
     void (*fpDeriv[2])(float *, float *);
-
+    void (*ispcDeriv[2])(const struct ispc::ConstantMemory &, float *,
+                         struct ispc::gridDim &, struct ispc::blockDim &,
+                         float *, float *, const int32_t, const int32_t,
+                         const int32_t);
+    float *ispc_sm_ptr[2];
+    const int pencil[2] = {sPencils, lPencils};
     switch (dimension) {
     case 0:
         fpDeriv[0] = derivative_x;
         fpDeriv[1] = derivative_x_lPencils;
+        ispcDeriv[0] = ispc::derivative_x_ispc;
+        ispcDeriv[1] = ispc::derivative_x_lPencils_ispc;
+        ispc_sm_ptr[0] = new float[sPencils * (mx + 8)];
+        ispc_sm_ptr[1] = new float[lPencils * (mx + 8)];
         break;
     case 1:
         fpDeriv[0] = derivative_y;
         fpDeriv[1] = derivative_y_lPencils;
+        ispcDeriv[0] = ispc::derivative_y_ispc;
+        ispcDeriv[1] = ispc::derivative_y_lPencils_ispc;
+        ispc_sm_ptr[0] = new float[sPencils * (my + 8)];
+        ispc_sm_ptr[1] = new float[lPencils * (my + 8)];
         break;
     case 2:
         fpDeriv[0] = derivative_z;
         fpDeriv[1] = derivative_z_lPencils;
+        ispcDeriv[0] = ispc::derivative_z_ispc;
+        ispcDeriv[1] = ispc::derivative_z_lPencils_ispc;
+        ispc_sm_ptr[0] = new float[sPencils * (mz + 8)];
+        ispc_sm_ptr[1] = new float[lPencils * (mz + 8)];
         break;
     }
 
@@ -417,7 +422,6 @@ void runTest(int dimension) {
     float *f = new float[mx * my * mz];
     float *df = new float[mx * my * mz];
     float *ispc_f = new float[mx * my * mz];
-    float *ispc_sm = new float[sPencils * (mx + 8)];
     float *sol = new float[mx * my * mz];
 
     initInput(f, dimension);
@@ -439,7 +443,7 @@ void runTest(int dimension) {
 
     printf("%c derivatives\n\n", (char)(0x58 + dimension));
 
-    for (int fp = 0; fp < 1; fp++) {
+    for (int fp = 0; fp < 2; fp++) {
         cudaCheck(cudaMemcpy(d_f, f, bytes, cudaMemcpyHostToDevice));
         cudaCheck(cudaMemset(d_df, 0, bytes));
         memset(ispc_f, 0, bytes);
@@ -447,17 +451,16 @@ void runTest(int dimension) {
         fpDeriv[fp]<<<grid[dimension][fp], block[dimension][fp]>>>(
             d_f, d_df); // warm up
         cudaCheck(cudaEventRecord(startEvent, 0));
+        ispc::gridDim grid_dim{grid[dimension][fp].x, grid[dimension][fp].y,
+                               grid[dimension][fp].z};
+        ispc::blockDim block_dim{block[dimension][fp].x, block[dimension][fp].y,
+                                 block[dimension][fp].z};
         for (int i = 0; i < nReps; i++) {
             fpDeriv[fp]<<<grid[dimension][fp], block[dimension][fp]>>>(d_f,
                                                                        d_df);
+            ispcDeriv[fp](cm, ispc_sm_ptr[fp], grid_dim, block_dim, f, ispc_f,
+                          pencil[fp], mx, my);
         }
-
-        ispc::gridDim grid_dim{grid[dimension][0].x, grid[dimension][0].y,
-                               grid[dimension][0].z};
-        ispc::blockDim block_dim{block[dimension][0].x, block[dimension][0].y,
-                                 block[dimension][0].z};
-        ispc::derivative_x_ispc(cm, ispc_sm, grid_dim, block_dim, f, ispc_f, sPencils,
-                                mx, my);
 
         cudaCheck(cudaEventRecord(stopEvent, 0));
         cudaCheck(cudaEventSynchronize(stopEvent));
@@ -489,6 +492,9 @@ void runTest(int dimension) {
     delete[] f;
     delete[] df;
     delete[] sol;
+    delete[] ispc_f;
+    delete[] ispc_sm_ptr[0];
+    delete[] ispc_sm_ptr[1];
 }
 
 // This the main host code for the finite difference
@@ -504,7 +510,7 @@ int main(void) {
     setDerivativeParameters(); // initialize
 
     runTest(0); // x derivative
-    // runTest(1); // y derivative
+    runTest(1); // y derivative
     // runTest(2); // z derivative
 
     return 0;
