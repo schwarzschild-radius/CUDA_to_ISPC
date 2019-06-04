@@ -1,4 +1,4 @@
-#include "finite_difference_cuda.cuh"
+//#include "finite_difference_cuda.cuh"
 
 float fx = 1.0f, fy = 1.0f, fz = 1.0f;
 const int mx = 64, my = 64, mz = 64;
