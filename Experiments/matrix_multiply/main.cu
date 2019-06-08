@@ -37,11 +37,12 @@ void executeCUDA(T *cuda_C, T *A, T *B, unsigned int N,
 
 template <typename T>
 void executeISPC(T *ispc_C, T *A, T *B, uint16_t N, uint16_t block_size) {
-    ispc::blockDim block{1, block_size, block_size};
-      ispc::gridDim grid{1, static_cast<uint16_t>(N / block_size),
-                         static_cast<uint16_t>(N / block_size)};
+    int *As = new int[block_size * block_size], *Bs = new int[block_size * block_size];
+    ispc::blockDim block{block_size, block_size, 1};
+      ispc::gridDim grid{static_cast<uint16_t>(N / block_size),
+                         static_cast<uint16_t>(N / block_size), 1};
     // ispc::gridDim grid{1, 1, 1};
-    ispc::matrixMulISPC(grid, block, ispc_C, A, B, N, N, block_size);
+    ispc::matrixMulISPC(grid, block, As, Bs, ispc_C, A, B, N, N, block_size);
 }
 
 template <typename T>
@@ -65,7 +66,7 @@ template <typename T> void compareResults(T *A, T *B, T *C, uint N) {
 }
 
 int main(int argc, char *argv[]) {
-    size_t N = 8;
+    size_t N = 4;
     if (argc == 2) {
         N = strtoul(argv[argc - 1], nullptr, 10);
     }
@@ -73,7 +74,7 @@ int main(int argc, char *argv[]) {
         ispc_C(N * N, 0), ref_C(N * N, 0);
     fill_matrix(A.data(), N, N);
     fill_matrix(B.data(), N, N);
-    size_t block_size = 4;
+    size_t block_size = 2;
     executeCUDA(cuda_C.data(), A.data(), B.data(), N, block_size);
     executeISPC(ispc_C.data(), A.data(), B.data(), N, block_size);
     executeReference(ref_C.data(), A.data(), B.data(), N, N, N);
