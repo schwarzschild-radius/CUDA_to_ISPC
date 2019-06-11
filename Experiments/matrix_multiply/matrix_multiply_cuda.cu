@@ -3,8 +3,7 @@
 
 #define BLOCK_SIZE 4
 
-__global__ void matrixMulCUDA(int *C, int *A, int *B, int wA, int wB,
-                              int block_size [[maybe_unused]]) {
+__global__ void matrixMulCUDA(int *C, int *A, int *B, int wA, int wB) {
   // Block index
   int bx = blockIdx.x;
   int by = blockIdx.y;

@@ -27,7 +27,7 @@ void executeCUDA(T *cuda_C, T *A, T *B, unsigned int N,
     dim3 block = {block_size, block_size, 1};
     dim3 grid = {N / block_size, N / block_size, 1};
 
-    cudaCheckLaunch(matrixMulCUDA, grid, block, d_cuda_C, d_A, d_B, N, N, block_size)
+    cudaCheckLaunch(matrixMulCUDA, grid, block, d_cuda_C, d_A, d_B, N, N)
 
     cudaCheck(cudaMemcpy(cuda_C, d_cuda_C, nbytes, cudaMemcpyDeviceToHost));
     cudaFree(d_A);
