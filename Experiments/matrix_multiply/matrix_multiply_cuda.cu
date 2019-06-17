@@ -56,7 +56,6 @@ __global__ void matrixMulCUDA(int *C, int *A, int *B, int wA, int wB,
     // Multiply the two matrices together;
     // each thread computes one element
     // of the block sub-matrix
-#pragma unroll
 
     for (int k = 0; k < BLOCK_SIZE; ++k) {
       Csub += As[ty][k] * Bs[k][tx];
