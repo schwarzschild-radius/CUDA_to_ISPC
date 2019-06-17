@@ -1,0 +1,3 @@
+add_ispc_library()
+add_cuda_clang_library()
+add_cuda_clang_executable(atomic main.cu)

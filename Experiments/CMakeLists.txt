@@ -1,0 +1,4 @@
+add_subdirectory(atomic)
+add_subdirectory(finite_difference)
+add_subdirectory(transpose)
+add_subdirectory(matrix_multiply)
