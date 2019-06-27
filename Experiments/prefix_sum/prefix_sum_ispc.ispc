@@ -19,6 +19,7 @@ export void prefix_sum_ispc(uniform Dim3 &gridDim, uniform Dim3 &blockDim,
                             for (threadIdx.x = programIndex;
                                  threadIdx.x < blockDim.x;
                                  threadIdx.x += programCount) {
+                                tid = threadIdx.x;
                                 if (((i - tid % i) == 1) && tid != 0) {
                                     a[tid] = a[tid] + a[tid - i / 2];
                                 }

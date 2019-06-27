@@ -27,8 +27,8 @@ template <typename T> void executeCUDA(T *a, size_t N) {
 }
 
 template <typename T> void executeISPC(T *a, size_t N) {
-    ispc::Dim3 block{1, 1, 1};
-    ispc::Dim3 grid{static_cast<int>(N), 1, 1};
+    ispc::Dim3 grid{1, 1, 1};
+    ispc::Dim3 block{static_cast<int>(N), 1, 1};
     ispc::prefix_sum_ispc(grid, block, a, N);
 }
 
@@ -44,7 +44,7 @@ template <typename T> void executeReference(T *a, size_t N) {
 
 template <typename Ref, typename... T>
 void compareResults(int N, std::vector<Ref> &ref, std::vector<T> &... rest) {
-    for (int i = 0; i < N; i++) {
+    for (int i = 0;  i < N; i++) {
         if (((ref[i] != rest[i]) || ...)) {
             std::cerr << "error at " << i << " " << ref[i] << " ";
             (std::cerr << ... << rest[i]) << '\n';
@@ -60,7 +60,7 @@ template <typename T> void print(std::vector<T> v) {
 }
 
 int main(int argc, char *argv[]) {
-    size_t N = 8;
+    size_t N = 1024;
     if (argc == 2) {
         N = strtoul(argv[argc - 1], nullptr, 10);
     }
