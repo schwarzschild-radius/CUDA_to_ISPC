@@ -5,11 +5,12 @@ CUDA_PATH=/usr/local/cuda-9.0
 CUDA_LINK_FLAGS=-L${CUDA_PATH}/lib64  -lcudart
 INCLUDES=-I ../utils/
 ISPC_TARGET=avx2-i32x8
+DEBUG=-g
 
 CUDA_CLANG=${CLANGCXX} --cuda-gpu-arch=${CUDA_ARCH_FLAGS} --cuda-path=${CUDA_PATH} ${CUDA_LINK_FLAGS} ${CXXFLAGS}
 
-eigenvalue: main.cu bisect_large.o
-	${CUDA_CLANG} -o main main.cu bisect_large.o
+main: main.cu bisect_large.o
+	${CUDA_CLANG} -g -o main main.cu bisect_large.o
 
 bisect_large.o: bisect_large.cu
 	${CUDA_CLANG} -o bisect_large.o -c bisect_large.cu

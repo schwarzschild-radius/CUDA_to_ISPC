@@ -40,9 +40,6 @@ compactStreamsFinal(const unsigned int tid, const unsigned int tid_2,
                     unsigned int c_block_iend_2, unsigned int c_sum_block_2
                    );
 
-////////////////////////////////////////////////////////////////////////////////
-//! Perform scan to compact list of block start addresses
-////////////////////////////////////////////////////////////////////////////////
 __device__
 void
 scanCompactBlocksStartAddress(const unsigned int tid, const unsigned int tid_2,
@@ -51,9 +48,6 @@ scanCompactBlocksStartAddress(const unsigned int tid, const unsigned int tid_2,
                               unsigned short *s_cl_helper
                              );
 
-////////////////////////////////////////////////////////////////////////////////
-//! Perform scan to obtain number of eigenvalues before a specific block
-////////////////////////////////////////////////////////////////////////////////
 __device__
 void
 scanSumBlocks(const unsigned int tid, const unsigned int tid_2,
@@ -63,10 +57,6 @@ scanSumBlocks(const unsigned int tid, const unsigned int tid_2,
               unsigned short *s_cl_helper
              );
 
-////////////////////////////////////////////////////////////////////////////////
-//! Perform initial scan for compaction of intervals containing one and
-//! multiple eigenvalues; also do initial scan to build blocks
-////////////////////////////////////////////////////////////////////////////////
 __device__
 void
 scanInitial(const unsigned int tid, const unsigned int tid_2,
@@ -76,11 +66,6 @@ scanInitial(const unsigned int tid, const unsigned int tid_2,
             unsigned short *s_cl_blocking, unsigned short *s_cl_helper
            );
 
-////////////////////////////////////////////////////////////////////////////////
-//! Store all non-empty intervals resulting from the subdivision of the interval
-//! currently processed by the thread
-//! @param  addr  address where to store
-////////////////////////////////////////////////////////////////////////////////
 __device__
 void
 storeNonEmptyIntervalsLarge(unsigned int addr,
@@ -98,18 +83,6 @@ storeNonEmptyIntervalsLarge(unsigned int addr,
                             unsigned int &is_active_second
                            );
 
-////////////////////////////////////////////////////////////////////////////////
-//! Bisection to find eigenvalues of a real, symmetric, and tridiagonal matrix
-//! @param  g_d  diagonal elements in global memory
-//! @param  g_s  superdiagonal elements in global elements (stored so that the
-//!              element *(g_s - 1) can be accessed an equals 0
-//! @param  n   size of matrix
-//! @param  lg  lower bound of input interval (e.g. Gerschgorin interval)
-//! @param  ug  upper bound of input interval (e.g. Gerschgorin interval)
-//! @param  lg_eig_count  number of eigenvalues that are smaller than \a lg
-//! @param  lu_eig_count  number of eigenvalues that are smaller than \a lu
-//! @param  epsilon  desired accuracy of eigenvalues to compute
-////////////////////////////////////////////////////////////////////////////////
 __global__
 void
 bisectKernelLarge(float *g_d, float *g_s, const unsigned int n,
@@ -486,9 +459,6 @@ bisectKernelLarge(float *g_d, float *g_s, const unsigned int n,
                 s_compaction_list, s_cl_helper, offset_mult_lambda);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//! Write data to global memory
-////////////////////////////////////////////////////////////////////////////////
 __device__
 void writeToGmem(const unsigned int tid, const unsigned int tid_2,
                  const unsigned int num_threads_active,
@@ -562,9 +532,6 @@ void writeToGmem(const unsigned int tid, const unsigned int tid_2,
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//! Perform final stream compaction before writing data to global memory
-////////////////////////////////////////////////////////////////////////////////
 __device__
 void
 compactStreamsFinal(const unsigned int tid, const unsigned int tid_2,
@@ -653,9 +620,6 @@ compactStreamsFinal(const unsigned int tid, const unsigned int tid_2,
 
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//! Compute addresses to obtain compact list of block start addresses
-////////////////////////////////////////////////////////////////////////////////
 __device__
 void
 scanCompactBlocksStartAddress(const unsigned int tid, const unsigned int tid_2,
@@ -718,9 +682,6 @@ scanCompactBlocksStartAddress(const unsigned int tid, const unsigned int tid_2,
 
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//! Perform scan to obtain number of eigenvalues before a specific block
-////////////////////////////////////////////////////////////////////////////////
 __device__
 void
 scanSumBlocks(const unsigned int tid, const unsigned int tid_2,
@@ -783,10 +744,6 @@ scanSumBlocks(const unsigned int tid, const unsigned int tid_2,
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//! Perform initial scan for compaction of intervals containing one and
-//! multiple eigenvalues; also do initial scan to build blocks
-////////////////////////////////////////////////////////////////////////////////
 __device__
 void
 scanInitial(const unsigned int tid, const unsigned int tid_2,
@@ -888,10 +845,6 @@ scanInitial(const unsigned int tid, const unsigned int tid_2,
 
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//! Store all non-empty intervals resulting from the subdivision of the interval
-//! currently processed by the thread
-////////////////////////////////////////////////////////////////////////////////
 __device__
 void
 storeNonEmptyIntervalsLarge(unsigned int addr,
