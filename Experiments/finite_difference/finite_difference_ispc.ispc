@@ -1,13 +1,40 @@
-struct gridDim {
-    uniform unsigned int32 gridDim_x;
-    uniform unsigned int32 gridDim_y;
-    uniform unsigned int32 gridDim_z;
-};
+#define ISPC_GRID                                                              \
+    for (blockIdx.z = 0; blockIdx.z < gridDim.z; blockIdx.z++) {               \
+        for (blockIdx.y = 0; blockIdx.y < gridDim.y; blockIdx.y++) {           \
+            for (blockIdx.x = 0; blockIdx.x < gridDim.x; blockIdx.x++) {
 
-struct blockDim {
-    uniform unsigned int32 blockDim_x;
-    uniform unsigned int32 blockDim_y;
-    uniform unsigned int32 blockDim_z;
+#define ISPC_BLOCK                                                             \
+    for (threadIdx.z = 0; threadIdx.z < blockDim.z; threadIdx.z++) {           \
+        for (threadIdx.y = 0; threadIdx.y < blockDim.y; threadIdx.y++) {       \
+            for (threadIdx.x = programIndex; threadIdx.x < blockDim.x;         \
+                 threadIdx.x += programCount) {
+
+#define ISPC_START                                                             \
+    ISPC_GRID                                                                  \
+    ISPC_BLOCK
+
+#define ISPC_GRID_END                                                          \
+    }                                                                          \
+    }                                                                          \
+    }
+
+#define ISPC_BLOCK_END                                                         \
+    }                                                                          \
+    }                                                                          \
+    }
+
+#define ISPC_END                                                               \
+    ISPC_GRID_END                                                              \
+    ISPC_BLOCK_END
+
+#define SYNCTHREADS()                                                           \
+    ISPC_BLOCK_END                                                                   \
+    ISPC_BLOCK
+
+
+
+struct Dim3{
+    unsigned int x, y, z;
 };
 
 struct ConstantMemory {
@@ -16,49 +43,35 @@ struct ConstantMemory {
 };
 
 export void derivative_x_ispc(uniform const ConstantMemory &cm,
-                              uniform float s_f[], uniform gridDim &grid_dim,
-                              uniform blockDim &block_dim, uniform float f[],
+                              uniform float s_f[],const uniform Dim3 &gridDim,
+                              const uniform Dim3 &blockDim, uniform float f[],
                               uniform float df[], uniform const int sPencils,
                               uniform const int mx, uniform const int my) {
-    for (size_t blockIdx_z = 0; blockIdx_z < grid_dim.gridDim_z; blockIdx_z++) {
-        for (size_t blockIdx_y = 0; blockIdx_y < grid_dim.gridDim_y;
-             blockIdx_y++) {
-            for (size_t blockIdx_x = 0; blockIdx_x < grid_dim.gridDim_x;
-                 blockIdx_x++) {
-                for (size_t threadIdx_z = 0; threadIdx_z < block_dim.blockDim_z;
-                     threadIdx_z++) {
-                    for (size_t threadIdx_y = 0;
-                         threadIdx_y < block_dim.blockDim_y; threadIdx_y++) {
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
-                            int i = threadIdx_x;
+                            Dim3 blockIdx, threadIdx;
+ISPC_START
+                            int i = threadIdx.x;
                             int j =
-                                blockIdx_x * block_dim.blockDim_y + threadIdx_y;
-                            int k = blockIdx_y;
+                                blockIdx.x * blockDim.y + threadIdx.y;
+                            int k = blockIdx.y;
                             int si = i + 4; // local i for shared memory access
                                             // + halo offset
                             int sj =
-                                threadIdx_y; // local j for shared memory access
+                                threadIdx.y; // local j for shared memory access
 
                             int globalIdx = k * mx * my + j * mx + i;
 
                             s_f[sj * (mx + 8) + si] = f[globalIdx];
-
+SYNCTHREADS()
                             // syncthreads
-                        }
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
 
-                            int i = threadIdx_x;
+                            int i = threadIdx.x;
                             int j =
-                                blockIdx_x * block_dim.blockDim_y + threadIdx_y;
-                            int k = blockIdx_y;
+                                blockIdx.x * blockDim.y + threadIdx.y;
+                            int k = blockIdx.y;
                             int si = i + 4; // local i for shared memory access
                                             // + halo offset
                             int sj =
-                                threadIdx_y; // local j for shared memory access
+                                threadIdx.y; // local j for shared memory access
 
                             int globalIdx = k * mx * my + j * mx + i;
                             // fill in periodic images in shared memory array
@@ -69,19 +82,16 @@ export void derivative_x_ispc(uniform const ConstantMemory &cm,
                                     s_f[sj * (mx + 8) + si + 1];
                             }
 
-                            // syncthreads
-                        }
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
-                            int i = threadIdx_x;
+                            // syncthreadz
+SYNCTHREADS()
+                            int i = threadIdx.x;
                             int j =
-                                blockIdx_x * block_dim.blockDim_y + threadIdx_y;
-                            int k = blockIdx_y;
+                                blockIdx.x * blockDim.y + threadIdx.y;
+                            int k = blockIdx.y;
                             int si = i + 4; // local i for shared memory access
                                             // + halo offset
                             int sj =
-                                threadIdx_y; // local j for shared memory access
+                                threadIdx.y; // local j for shared memory access
 
                             int globalIdx = k * mx * my + j * mx + i;
 
@@ -94,84 +104,51 @@ export void derivative_x_ispc(uniform const ConstantMemory &cm,
                                             s_f[sj * (mx + 8) + si - 3]) +
                                  cm.c_dx * (s_f[sj * (mx + 8) + si + 4] -
                                             s_f[sj * (mx + 8) + si - 4]));
-                        }
-                    }
-                }
-            }
-        }
-    }
+ISPC_END                        
 }
 export void
 derivative_x_lPencils_ispc(uniform const ConstantMemory &cm,
-                           uniform float s_f[], uniform gridDim &grid_dim,
-                           uniform blockDim &block_dim, uniform float f[],
+                           uniform float s_f[], const uniform Dim3 &gridDim,
+                           const uniform Dim3 &blockDim, uniform float f[],
                            uniform float df[], uniform const int lPencils,
                            uniform const int mx, uniform const int my) {
-    for (size_t blockIdx_z = 0; blockIdx_z < grid_dim.gridDim_z; blockIdx_z++) {
-        for (size_t blockIdx_y = 0; blockIdx_y < grid_dim.gridDim_y;
-             blockIdx_y++) {
-            for (size_t blockIdx_x = 0; blockIdx_x < grid_dim.gridDim_x;
-                 blockIdx_x++) {
-                for (size_t threadIdx_z = 0; threadIdx_z < block_dim.blockDim_z;
-                     threadIdx_z++) {
-                    for (size_t threadIdx_y = 0;
-                         threadIdx_y < block_dim.blockDim_y; threadIdx_y++) {
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
-                            int i = threadIdx_x;
-                            int jBase = blockIdx_x * lPencils;
-                            int k = blockIdx_y;
+                               Dim3 blockIdx, threadIdx;
+ISPC_START
+                            int i = threadIdx.x;
+                            int jBase = blockIdx.x * lPencils;
+                            int k = blockIdx.y;
                             int si = i + 4; // local i for shared memory access
                                             // + halo offset
 
-                            for (int sj = threadIdx_y; sj < lPencils;
-                                 sj += block_dim.blockDim_y) {
+                            for (int sj = threadIdx.y; sj < lPencils;
+                                 sj += blockDim.y) {
                                 int globalIdx =
                                     k * mx * my + (jBase + sj) * mx + i;
                                 s_f[sj * (mx + 8) + si] = f[globalIdx];
                             }
-                        }
-                    }
-                }
-                for (size_t threadIdx_z = 0; threadIdx_z < block_dim.blockDim_z;
-                     threadIdx_z++) {
-                    for (size_t threadIdx_y = 0;
-                         threadIdx_y < block_dim.blockDim_y; threadIdx_y++) {
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
-                            int i = threadIdx_x;
-                            int jBase = blockIdx_x * lPencils;
-                            int k = blockIdx_y;
+SYNCTHREADS()
+                            int i = threadIdx.x;
+                            int jBase = blockIdx.x * lPencils;
+                            int k = blockIdx.y;
                             int si = i + 4;
                             // fill in periodic images in shared memory array
                             if (i < 4) {
-                                for (int sj = threadIdx_y; sj < lPencils;
-                                     sj += block_dim.blockDim_y) {
+                                for (int sj = threadIdx.y; sj < lPencils;
+                                     sj += blockDim.y) {
                                     s_f[sj * (mx + 8) + si - 4] =
                                         s_f[sj * (mx + 8) + si + mx - 5];
                                     s_f[sj * (mx + 8) + si + mx] =
                                         s_f[sj * (mx + 8) + si + 1];
                                 }
                             }
-                        }
-                    }
-                }
-                for (size_t threadIdx_z = 0; threadIdx_z < block_dim.blockDim_z;
-                     threadIdx_z++) {
-                    for (size_t threadIdx_y = 0;
-                         threadIdx_y < block_dim.blockDim_y; threadIdx_y++) {
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
-                            int i = threadIdx_x;
-                            int jBase = blockIdx_x * lPencils;
-                            int k = blockIdx_y;
+SYNCTHREADS()                        
+                            int i = threadIdx.x;
+                            int jBase = blockIdx.x * lPencils;
+                            int k = blockIdx.y;
                             int si = i + 4;
 
-                            for (int sj = threadIdx_y; sj < lPencils;
-                                 sj += block_dim.blockDim_y) {
+                            for (int sj = threadIdx.y; sj < lPencils;
+                                 sj += blockDim.y) {
                                 int globalIdx =
                                     k * mx * my + (jBase + sj) * mx + i;
                                 df[globalIdx] =
@@ -184,55 +161,31 @@ derivative_x_lPencils_ispc(uniform const ConstantMemory &cm,
                                      cm.c_dx * (s_f[sj * (mx + 8) + si + 4] -
                                                 s_f[sj * (mx + 8) + si - 4]));
                             }
-                        }
-                    }
-                }
-            }
-        }
-    }
+ISPC_END                    
 }
 export void derivative_y_ispc(uniform const ConstantMemory &cm,
-                              uniform float s_f[], uniform gridDim &grid_dim,
-                              uniform blockDim &block_dim, uniform float f[],
+                              uniform float s_f[], const uniform Dim3 &gridDim,
+                              const uniform Dim3 &blockDim, uniform float f[],
                               uniform float df[], uniform const int sPencils,
                               uniform const int mx, uniform const int my) {
-    for (size_t blockIdx_z = 0; blockIdx_z < grid_dim.gridDim_z; blockIdx_z++) {
-        for (size_t blockIdx_y = 0; blockIdx_y < grid_dim.gridDim_y;
-             blockIdx_y++) {
-            for (size_t blockIdx_x = 0; blockIdx_x < grid_dim.gridDim_x;
-                 blockIdx_x++) {
-                for (size_t threadIdx_z = 0; threadIdx_z < block_dim.blockDim_z;
-                     threadIdx_z++) {
-                    for (size_t threadIdx_y = 0;
-                         threadIdx_y < block_dim.blockDim_y; threadIdx_y++) {
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
+                                  Dim3 blockIdx, threadIdx;
+ISPC_START
                             int i =
-                                blockIdx_x * block_dim.blockDim_x + threadIdx_x;
-                            int j = threadIdx_y;
-                            int k = blockIdx_y;
-                            int si = threadIdx_x;
+                                blockIdx.x * blockDim.x + threadIdx.x;
+                            int j = threadIdx.y;
+                            int k = blockIdx.y;
+                            int si = threadIdx.x;
                             int sj = j + 4;
 
                             int globalIdx = k * mx * my + j * mx + i;
 
                             s_f[sj * sPencils + si] = f[globalIdx];
-                        }
-                    }
-                }
-                for (size_t threadIdx_z = 0; threadIdx_z < block_dim.blockDim_z;
-                     threadIdx_z++) {
-                    for (size_t threadIdx_y = 0;
-                         threadIdx_y < block_dim.blockDim_y; threadIdx_y++) {
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
+SYNCTHREADS()
                             int i =
-                                blockIdx_x * block_dim.blockDim_x + threadIdx_x;
-                            int j = threadIdx_y;
-                            int k = blockIdx_y;
-                            int si = threadIdx_x;
+                                blockIdx.x * blockDim.x + threadIdx.x;
+                            int j = threadIdx.y;
+                            int k = blockIdx.y;
+                            int si = threadIdx.x;
                             int sj = j + 4;
                             int globalIdx = k * mx * my + j * mx + i;
 
@@ -242,21 +195,12 @@ export void derivative_y_ispc(uniform const ConstantMemory &cm,
                                 s_f[(sj + my) * sPencils + si] =
                                     s_f[(sj + 1) * sPencils + si];
                             }
-                        }
-                    }
-                }
-                for (size_t threadIdx_z = 0; threadIdx_z < block_dim.blockDim_z;
-                     threadIdx_z++) {
-                    for (size_t threadIdx_y = 0;
-                         threadIdx_y < block_dim.blockDim_y; threadIdx_y++) {
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
+SYNCTHREADS()                    
                             int i =
-                                blockIdx_x * block_dim.blockDim_x + threadIdx_x;
-                            int j = threadIdx_y;
-                            int k = blockIdx_y;
-                            int si = threadIdx_x;
+                                blockIdx.x * blockDim.x + threadIdx.x;
+                            int j = threadIdx.y;
+                            int k = blockIdx.y;
+                            int si = threadIdx.x;
                             int sj = j + 4;
                             int globalIdx = k * mx * my + j * mx + i;
 
@@ -269,80 +213,47 @@ export void derivative_y_ispc(uniform const ConstantMemory &cm,
                                             s_f[(sj - 3) * sPencils + si]) +
                                  cm.c_dy * (s_f[(sj + 4) * sPencils + si] -
                                             s_f[(sj - 4) * sPencils + si]));
-                        }
-                    }
-                }
-            }
-        }
-    }
+ISPC_END
 }
 export void
 derivative_y_lPencils_ispc(uniform const ConstantMemory &cm,
-                           uniform float s_f[], uniform gridDim &grid_dim,
-                           uniform blockDim &block_dim, uniform float f[],
+                           uniform float s_f[], const uniform Dim3 &gridDim,
+                           const uniform Dim3 &blockDim, uniform float f[],
                            uniform float df[], uniform const int lPencils,
                            uniform const int mx, uniform const int my) {
-    for (size_t blockIdx_z = 0; blockIdx_z < grid_dim.gridDim_z; blockIdx_z++) {
-        for (size_t blockIdx_y = 0; blockIdx_y < grid_dim.gridDim_y;
-             blockIdx_y++) {
-            for (size_t blockIdx_x = 0; blockIdx_x < grid_dim.gridDim_x;
-                 blockIdx_x++) {
-                for (size_t threadIdx_z = 0; threadIdx_z < block_dim.blockDim_z;
-                     threadIdx_z++) {
-                    for (size_t threadIdx_y = 0;
-                         threadIdx_y < block_dim.blockDim_y; threadIdx_y++) {
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
+                               Dim3 blockIdx, threadIdx;
+ISPC_START
                             int i =
-                                blockIdx_x * block_dim.blockDim_x + threadIdx_x;
-                            int k = blockIdx_y;
-                            int si = threadIdx_x;
+                                blockIdx.x * blockDim.x + threadIdx.x;
+                            int k = blockIdx.y;
+                            int si = threadIdx.x;
 
-                            for (int j = threadIdx_y; j < my;
-                                 j += block_dim.blockDim_y) {
+                            for (int j = threadIdx.y; j < my;
+                                 j += blockDim.y) {
                                 int globalIdx = k * mx * my + j * mx + i;
                                 int sj = j + 4;
                                 s_f[sj * lPencils + si] = f[globalIdx];
                             }
-                        }
-                    }
-                }
-                for (size_t threadIdx_z = 0; threadIdx_z < block_dim.blockDim_z;
-                     threadIdx_z++) {
-                    for (size_t threadIdx_y = 0;
-                         threadIdx_y < block_dim.blockDim_y; threadIdx_y++) {
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
+SYNCTHREADS()                        
 
                             int i =
-                                blockIdx_x * block_dim.blockDim_x + threadIdx_x;
-                            int k = blockIdx_y;
-                            int si = threadIdx_x;
-                            int sj = threadIdx_y + 4;
+                                blockIdx.x * blockDim.x + threadIdx.x;
+                            int k = blockIdx.y;
+                            int si = threadIdx.x;
+                            int sj = threadIdx.y + 4;
                             if (sj < 8) {
                                 s_f[(sj - 4) * lPencils + si] =
                                     s_f[(sj + my - 5) * lPencils + si];
                                 s_f[(sj + my) * lPencils + si] =
                                     s_f[(sj + 1) * lPencils + si];
                             }
-                        }
-                    }
-                }
-                for (size_t threadIdx_z = 0; threadIdx_z < block_dim.blockDim_z;
-                     threadIdx_z++) {
-                    for (size_t threadIdx_y = 0;
-                         threadIdx_y < block_dim.blockDim_y; threadIdx_y++) {
-                        for (size_t threadIdx_x = programIndex;
-                             threadIdx_x < block_dim.blockDim_x;
-                             threadIdx_x += programCount) {
+SYNCTHREADS()                    
                             int i =
-                                blockIdx_x * block_dim.blockDim_x + threadIdx_x;
-                            int k = blockIdx_y;
-                            int si = threadIdx_x;
-                            for (int j = threadIdx_y; j < my;
-                                 j += block_dim.blockDim_y) {
+                                blockIdx.x * blockDim.x + threadIdx.x;
+                            int k = blockIdx.y;
+                            int si = threadIdx.x;
+                            for (int j = threadIdx.y; j < my;
+                                 j += blockDim.y) {
                                 int globalIdx = k * mx * my + j * mx + i;
                                 int sj = j + 4;
                                 df[globalIdx] =
@@ -355,21 +266,16 @@ derivative_y_lPencils_ispc(uniform const ConstantMemory &cm,
                                      cm.c_dy * (s_f[(sj + 4) * lPencils + si] -
                                                 s_f[(sj - 4) * lPencils + si]));
                             }
-                        }
-                    }
-                }
-            }
-        }
-    }
+ISPC_END                        
 }
 export void derivative_z_ispc(uniform const ConstantMemory &cm,
-                              uniform float s_f[], uniform gridDim &grid_dim,
-                              uniform blockDim &block_dim, uniform float f[],
+                              uniform float s_f[], const uniform Dim3 &gridDim,
+                              const uniform Dim3 &blockDim, uniform float f[],
                               uniform float df[], uniform const int sPencils,
                               uniform const int mx, uniform const int my) {}
 export void
 derivative_z_lPencils_ispc(uniform const ConstantMemory &cm,
-                           uniform float s_f[], uniform gridDim &grid_dim,
-                           uniform blockDim &block_dim, uniform float f[],
+                           uniform float s_f[], const uniform Dim3 &gridDim,
+                           const uniform Dim3 &blockDim, uniform float f[],
                            uniform float df[], uniform const int lPencils,
                            uniform const int mx, uniform const int my) {}

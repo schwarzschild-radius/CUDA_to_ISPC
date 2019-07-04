@@ -35,8 +35,8 @@ template <typename T> void executeCUDA(T *A, T *cuda_A, size_t N) {
 template <typename T> void executeISPC(T *A, T *ispc_A, uint N) {
     uint16_t threads = N > 1024 ? 1024 : N;
     uint16_t blocks = N > 1024 ? N / 1024 + 1 : 1;
-    ispc::gridDim grid{blocks, 1, 1};
-    ispc::blockDim block{threads, 1, 1};
+    ispc::Dim3 grid{blocks, 1, 1};
+    ispc::Dim3 block{threads, 1, 1};
     ispc::transpose_parallel_per_element_ispc(grid, block, A, ispc_A, N, 32);
 }
 

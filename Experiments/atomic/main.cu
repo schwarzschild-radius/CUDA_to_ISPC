@@ -44,14 +44,14 @@ void executeCUDA(size_t ARRAY_SIZE, size_t BIN_COUNT, const T *h_in,
 template <typename T>
 void executeISPC(size_t ARRAY_SIZE, size_t BIN_COUNT, const T *h_in,
                  const int *h_bins, int *ispc_bins) {
-                     ispc::gridDim grid_dim{static_cast<uint32_t>(ARRAY_SIZE / 64), 1, 1};
-                     ispc::blockDim block_dim{64, 1, 1};
+                     ispc::Dim3 grid_dim{static_cast<uint32_t>(ARRAY_SIZE / 64), 1, 1};
+                     ispc::Dim3 block_dim{64, 1, 1};
                      ispc::atomic_ispc(grid_dim, block_dim, ispc_bins, h_in, BIN_COUNT);
 }
 
 void checkResults(int *cuda, int *ispc, size_t N) {
     for(size_t i = 0; i < N; i++){
-        if(cuda[i] == ispc[i]){
+        if(cuda[i] != ispc[i]){
             std::cerr << "Mismatch at index : " << i << " " << cuda[i] << ", " << ispc[i] << "\n";
         }
     }

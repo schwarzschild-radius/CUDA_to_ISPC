@@ -37,11 +37,10 @@ void executeCUDA(T *cuda_C, T *A, T *B, unsigned int N,
 
 template <typename T>
 void executeISPC(T *ispc_C, T *A, T *B, uint16_t N, uint16_t block_size) {
-    ispc::blockDim block{1, block_size, block_size};
-      ispc::gridDim grid{1, static_cast<uint16_t>(N / block_size),
-                         static_cast<uint16_t>(N / block_size)};
-    // ispc::gridDim grid{1, 1, 1};
-    ispc::matrixMulISPC(grid, block, ispc_C, A, B, N, N, block_size);
+    ispc::Dim3 grid{static_cast<uint16_t>(N / block_size),
+                         static_cast<uint16_t>(N / block_size), 1};
+    ispc::Dim3 block{block_size, block_size, 1};
+    ispc::matrixMultiplyISPC(grid, block, ispc_C, A, B, N, N, block_size);
 }
 
 template <typename T>
@@ -78,13 +77,5 @@ int main(int argc, char *argv[]) {
     executeISPC(ispc_C.data(), A.data(), B.data(), N, block_size);
     executeReference(ref_C.data(), A.data(), B.data(), N, N, N);
     compareResults(cuda_C.data(), ispc_C.data(), ref_C.data(), N * N);
-
-    /* for(size_t i = 0; i < N; i++){
-        for(size_t j = 0; j < N; j++){
-            std::cout << ispc_C[i * N + j] << " ";
-        }
-        std::cout << "\n";
-    } */
-
     return 0;
 }
