@@ -383,7 +383,7 @@ void checkResults(double &error, double &maxError, float *sol, float *df) {
 void runTest(int dimension) {
     void (*fpDeriv[2])(float *, float *);
     void (*ispcDeriv[2])(const struct ispc::ConstantMemory &, float *,
-                         struct ispc::gridDim &, struct ispc::blockDim &,
+                         const ispc::Dim3 &, const ispc::Dim3 &,
                          float *, float *, const int32_t, const int32_t,
                          const int32_t);
     float *ispc_sm_ptr[2];
@@ -451,9 +451,9 @@ void runTest(int dimension) {
         fpDeriv[fp]<<<grid[dimension][fp], block[dimension][fp]>>>(
             d_f, d_df); // warm up
         cudaCheck(cudaEventRecord(startEvent, 0));
-        ispc::gridDim grid_dim{grid[dimension][fp].x, grid[dimension][fp].y,
+        ispc::Dim3 grid_dim{grid[dimension][fp].x, grid[dimension][fp].y,
                                grid[dimension][fp].z};
-        ispc::blockDim block_dim{block[dimension][fp].x, block[dimension][fp].y,
+        ispc::Dim3 block_dim{block[dimension][fp].x, block[dimension][fp].y,
                                  block[dimension][fp].z};
         for (int i = 0; i < nReps; i++) {
             fpDeriv[fp]<<<grid[dimension][fp], block[dimension][fp]>>>(d_f,
