@@ -6,3 +6,6 @@ build/
 
 # vscode dir
 .vscode/
+
+# object files
+*.o
