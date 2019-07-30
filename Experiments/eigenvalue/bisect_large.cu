@@ -30,9 +30,9 @@
 #include "bisect_large.cuh"
 
 // includes, kernels
-#include "bisect_kernel_large.cu"
-#include "bisect_kernel_large_multi.cu"
-#include "bisect_kernel_large_onei.cu"
+#include "bisect_kernel_large.cuh"
+#include "bisect_kernel_large_multi.cuh"
+#include "bisect_kernel_large_onei.cuh"
 
 ////////////////////////////////////////////////////////////////////////////////
 //! Initialize variables and memory for result
@@ -319,5 +319,4 @@ bool processResultDataLargeMatrix(const InputData &input,
     freePtr(pos_one);
 
     return bCompareResult;
-    return false;
 }

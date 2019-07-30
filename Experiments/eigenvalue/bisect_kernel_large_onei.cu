@@ -1,10 +1,5 @@
-#ifndef _BISECT_KERNEL_LARGE_ONEI_H_
-#define _BISECT_KERNEL_LARGE_ONEI_H_
+#include "bisect_kernel_large_onei.cuh"
 
-#include "config.h"
-#include "util.h"
-
-#include "bisect_util.cu"
 __global__
 void
 bisectKernelLarge_OneIntervals(float *g_d, float *g_s, const unsigned int n,
@@ -128,5 +123,3 @@ bisectKernelLarge_OneIntervals(float *g_d, float *g_s, const unsigned int n,
     }
 
 }
-
-#endif // #ifndef _BISECT_KERNEL_LARGE_ONEI_H_

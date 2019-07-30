@@ -1,10 +1,5 @@
-#ifndef _BISECT_KERNEL_LARGE_MULTI_H_
-#define _BISECT_KERNEL_LARGE_MULTI_H_
+#include "bisect_kernel_large_multi.cuh"
 
-#include "config.h"
-#include "util.h"
-
-#include "bisect_util.cu"
 
 __global__
 void
@@ -60,7 +55,7 @@ bisectKernelLarge_MultIntervals(float *g_d, float *g_s, const unsigned int n,
     unsigned int  is_active_second = 0;
 
     // initialize common start conditions
-    if (0 == tid)
+    if (tid == 0)
     {
 
         c_block_start = blocks_mult[blockIdx.x];
@@ -195,5 +190,3 @@ bisectKernelLarge_MultIntervals(float *g_d, float *g_s, const unsigned int n,
         g_pos[addr]   = s_right_count[tid];
     }
 }
-
-#endif // #ifndef _BISECT_KERNEL_LARGE_MULTI_H_

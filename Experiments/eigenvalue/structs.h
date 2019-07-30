@@ -120,3 +120,4 @@ struct ResultDataLarge
 };
 
 #endif // #ifndef _STRUCTS_H_
+

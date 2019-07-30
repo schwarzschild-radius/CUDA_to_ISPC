@@ -1,87 +1,4 @@
-#ifndef _BISECT_KERNEL_LARGE_H_
-#define _BISECT_KERNEL_LARGE_H_
-
-#include "config.h"
-#include "util.h"
-
-#include "bisect_util.cu"
-
-__device__
-void writeToGmem(const unsigned int tid, const unsigned int tid_2,
-                 const unsigned int num_threads_active,
-                 const unsigned int num_blocks_mult,
-                 float *g_left_one, float *g_right_one,
-                 unsigned int *g_pos_one,
-                 float *g_left_mult, float *g_right_mult,
-                 unsigned int *g_left_count_mult,
-                 unsigned int *g_right_count_mult,
-                 float *s_left, float *s_right,
-                 unsigned short *s_left_count, unsigned short *s_right_count,
-                 unsigned int *g_blocks_mult,
-                 unsigned int *g_blocks_mult_sum,
-                 unsigned short *s_compaction_list,
-                 unsigned short *s_cl_helper,
-                 unsigned int offset_mult_lambda
-                );
-__device__
-void
-compactStreamsFinal(const unsigned int tid, const unsigned int tid_2,
-                    const unsigned int num_threads_active,
-                    unsigned int &offset_mult_lambda,
-                    float *s_left, float *s_right,
-                    unsigned short *s_left_count, unsigned short *s_right_count,
-                    unsigned short *s_cl_one, unsigned short *s_cl_mult,
-                    unsigned short *s_cl_blocking, unsigned short *s_cl_helper,
-                    unsigned int is_one_lambda, unsigned int is_one_lambda_2,
-                    float &left, float &right, float &left_2, float &right_2,
-                    unsigned int &left_count, unsigned int &right_count,
-                    unsigned int &left_count_2, unsigned int &right_count_2,
-                    unsigned int c_block_iend, unsigned int c_sum_block,
-                    unsigned int c_block_iend_2, unsigned int c_sum_block_2
-                   );
-
-__device__
-void
-scanCompactBlocksStartAddress(const unsigned int tid, const unsigned int tid_2,
-                              const unsigned int num_threads_compaction,
-                              unsigned short *s_cl_blocking,
-                              unsigned short *s_cl_helper
-                             );
-
-__device__
-void
-scanSumBlocks(const unsigned int tid, const unsigned int tid_2,
-              const unsigned int num_threads_active,
-              const unsigned int num_threads_compaction,
-              unsigned short *s_cl_blocking,
-              unsigned short *s_cl_helper
-             );
-
-__device__
-void
-scanInitial(const unsigned int tid, const unsigned int tid_2,
-            const unsigned int num_threads_active,
-            const unsigned int num_threads_compaction,
-            unsigned short *s_cl_one, unsigned short *s_cl_mult,
-            unsigned short *s_cl_blocking, unsigned short *s_cl_helper
-           );
-
-__device__
-void
-storeNonEmptyIntervalsLarge(unsigned int addr,
-                            const unsigned int num_threads_active,
-                            float  *s_left, float *s_right,
-                            unsigned short  *s_left_count,
-                            unsigned short *s_right_count,
-                            float left, float mid, float right,
-                            const unsigned short left_count,
-                            const unsigned short mid_count,
-                            const unsigned short right_count,
-                            float epsilon,
-                            unsigned int &compact_second_chunk,
-                            unsigned short *s_compaction_list,
-                            unsigned int &is_active_second
-                           );
+#include "bisect_kernel_large.cuh"
 
 __global__
 void
@@ -156,7 +73,7 @@ bisectKernelLarge(float *g_d, float *g_s, const unsigned int n,
     __syncthreads();
 
     // set up initial configuration
-    if (0 == tid)
+    if (tid == 0)
     {
 
         s_left[0] = lg;
@@ -187,7 +104,7 @@ bisectKernelLarge(float *g_d, float *g_s, const unsigned int n,
         __syncthreads();
 
         // check if done
-        if (1 == all_threads_converged)
+        if (all_threads_converged == 1)
         {
             break;
         }
@@ -267,7 +184,7 @@ bisectKernelLarge(float *g_d, float *g_s, const unsigned int n,
         __syncthreads();
 
         // update state variables
-        if (0 == tid)
+        if (tid == 0)
         {
 
             // update number of active threads with result of reduction
@@ -322,7 +239,7 @@ bisectKernelLarge(float *g_d, float *g_s, const unsigned int n,
     // helper compaction list for generating blocks of intervals
     __shared__ unsigned short  s_cl_helper[2 * MAX_THREADS_BLOCK + 1];
 
-    if (0 == tid)
+    if (tid == 0)
     {
         // set to 0 for exclusive scan
         s_left_count[0] = 0;
@@ -337,7 +254,7 @@ bisectKernelLarge(float *g_d, float *g_s, const unsigned int n,
 
     // number of eigenvalues in the interval
     unsigned int multiplicity = right_count - left_count;
-    is_one_lambda = (1 == multiplicity);
+    is_one_lambda = (multiplicity == 1);
 
     s_cl_one[tid] = is_one_lambda;
     s_cl_mult[tid] = (! is_one_lambda);
@@ -894,5 +811,3 @@ storeNonEmptyIntervalsLarge(unsigned int addr,
         }
     }
 }
-
-#endif // #ifndef _BISECT_KERNEL_LARGE_H_
